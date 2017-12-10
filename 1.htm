@@ -1,0 +1,129 @@
+﻿<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title></title>
+    <script src="/Scripts/boot.js?v=$AppVersion" type="text/javascript"></script>
+    <script src="/Scripts/PlatForm/ComTools.js?v=$AppVersion" type="text/javascript"></script>
+    <script src="/Scripts/PlatForm/wizard.js?v=$AppVersion" type="text/javascript"></script>
+    <script type="text/javascript" hasvelocity="true">
+        var WizardParams = $Model.data.params;
+        var BizAreaId = '$Model.data.bizareaid';
+        var EpsProjId = "$!CurrentSession.EpsProjId";
+        var EpsProjLongCode = "$!CurrentSession.EpsProjLongCode";
+    </script>
+</head>master分支
+<body>
+    <div class="row-wrap" style="height: 100%">
+        <div class="row  row-hd row-hd-responsive" style="height: 100%">
+            <div class="portlet box blue" style="height: 100%;">
+                <div class="portlet-title">
+                    <div class="caption">
+                        <label>$Helper.GetResource("g_name")：</label><!--名称-->
+                        <input id="txtname" class="mini-textbox" style="width: 150px;" onenter="onKeyEnter" />
+                        <a class="mini-button blue" onclick="OnSearchClick"><i class="fa fa-search"></i>$Helper.GetResource("g_search")</a><!--查询-->
+                    </div>
+                    <div class="actions">
+                        <a class="mini-button blue" onclick="OnOK"><i class="fa fa-check"></i>$Helper.GetResource("g_ok")</a><!--确定-->
+                        <a class="mini-button blue" onclick="OnCancel"><i class="fa fa-ban"></i>$Helper.GetResource("g_cancel")</a><!--取消-->
+                    </div>
+                </div>  
+                <div class="portlet-body" style="height: 85%; ">
+                    <div id="EPSProject" class="mini-treegrid" style="width: 100%; height: 100%;" allowresize="true"
+                         idfield="project_guid" parentfield="parent_guid" resultastree="true" autoload="true" treecolumn="Name" onpreload="OnPreLoad"
+                         onbeforeload="OnBeforeLoad" url="/Form/TreeLazyLoad" showcheckbox="false">
+                        <div property="columns">
+                            <div type="indexcolumn" width="20"></div>
+                            <div name="Name" field="project_name">$Helper.GetResource("g_name")</div><!--名称-->
+                            <div field="LongCode">$Helper.GetResource("g_code")</div><!--编号-->
+                            <div field="EpsProjId" visible="false">EPS</div>
+                            <div field="project_type" visible="false">类型</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div> 
+
+        <script type="text/javascript">
+            mini.parse();
+            var gridright = mini.get("EPSProject");
+            //重定向Select的GetData方法
+            Select.GetData = GetData;
+
+            $(function () {
+                var bmulti = (WizardParams.multi == "1");
+                gridright.multiSelect = bmulti;
+                if (bmulti)
+                    gridright.showCheckBox = true;
+            });
+
+            function GetData() {
+                if (gridright.multiSelect) {
+                    return gridright.getCheckedNodes(false);
+                }
+                else {
+                    var result = new Array();
+                    var node = gridright.getSelected();
+                    result.push(node);
+                    return result;
+                }
+            }
+
+            function OnBeforeLoad(e) {
+                var sender = e.sender;    //树控件
+                var node = e.node;      //当前节点
+                var params = e.params;  //参数对象
+                params.KeyWord = "EPSProject";
+                params.KeyWordType = "BO";
+                params.select = WizardParams.select || "";
+                params.swhere = "";
+                params.sort = "displayid";
+                params.index = 0;
+                params.size = 0;
+                params.level = 0;
+                //获取分公司及项目
+                if (params.swhere != "")
+                    params.swhere = params.swhere + " and project_guid='" + EpsProjId + "' or Longcode like '" + EpsProjLongCode + ".%' and project_type = 0";
+                else
+                    params.swhere = params.swhere + "  project_guid='" + EpsProjId + "' or Longcode like '" + EpsProjLongCode + ".%' and project_type = 0";
+
+                //拼与主表关联的where条件
+                var txtname = mini.get("txtname");
+                if (txtname.value.length > 0)
+                    params.swhere = params.swhere + " and project_name like '%" + txtname.value + "%'";
+                //外部过滤条件
+                if (WizardParams.filter && WizardParams.filter.length > 0)
+                    params.swhere = params.swhere + " and (" + base64decode(WizardParams.filter) + ")";
+
+            }
+            //tree/grid 提取数据到本地之后，尚未赋值给 tree/grid 时触发
+            function OnPreLoad(e) {
+                var tmpdata = mini.decode(e.text);
+                if (tmpdata.success == false) {
+                    alert(tmpdata.message);
+                    return;
+                }
+                var data = mini.decode(tmpdata.data.value);
+                data = mini.arrayToTree(data, e.sender.nodesField, e.sender.idField, e.sender.parentField);
+                e.data = data;
+            }
+
+            function OnSearchClick(e) {
+                gridright.reload();
+            }
+
+            function OnOK() {
+                ComToolsCloseWindow("ok", null);
+            }
+            function OnCancel() {
+                ComToolsCloseWindow("cancel", null);
+            }
+        </script>
+</body>
+
+</html>
+
+
